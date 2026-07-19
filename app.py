@@ -128,7 +128,7 @@ def index():
         return redirect(url_for('index'))  # 重定向回主页
 
     movies = db.session.execute(select(Movie)).scalars().all()
-    return render_template('index.html', user=user, movies=movies)
+    return render_template('index.html', movies=movies)
 if __name__ == '__main__':
     app.run(debug=True)
 
