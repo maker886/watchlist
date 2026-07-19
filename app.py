@@ -95,10 +95,39 @@ def forge():
 
     db.session.commit()
     click.echo('Done.')
-@app.route('/')
+from sqlalchemy import select
+from flask import request, url_for, redirect, flash
+
+@app.context_processor
+def inject_user():  # 函数名可以随意修改
+    user = db.session.execute(select(User)).scalar()
+    return dict(user=user)  # 需要返回字典，等同于 return {'user': user}
+
+@app.errorhandler(404)  # 传入要处理的错误代码
+def page_not_found(error):  # 接受异常对象作为参数
+    user = db.session.execute(select(User)).scalar()
+    return render_template('404.html', user=user), 404  # 返回模板和状态码
+
+
+
+@app.route('/', methods=['GET', 'POST'])
 def index():
-    user = db.session.execute(select(User)).scalar()  # 读取用户记录
-    movies = db.session.execute(select(Movie)).scalars().all()  # 读取所有电影记录
+    if request.method == 'POST':  # 判断是否是 POST 请求
+        # 获取表单数据
+        title = request.form.get('title')  # 传入表单对应输入字段的 name 值
+        year = request.form.get('year')
+        # 验证数据
+        if not title or not year or len(year) > 4 or len(title) > 60:
+            flash('Invalid input.')  # 显示错误提示
+            return redirect(url_for('index'))  # 重定向回主页
+        # 保存表单数据到数据库
+        movie = Movie(title=title, year=year)  # 创建记录
+        db.session.add(movie)  # 添加到数据库会话
+        db.session.commit()  # 提交数据库会话
+        flash('Item created.')  # 显示成功创建的提示
+        return redirect(url_for('index'))  # 重定向回主页
+
+    movies = db.session.execute(select(Movie)).scalars().all()
     return render_template('index.html', user=user, movies=movies)
 if __name__ == '__main__':
     app.run(debug=True)
